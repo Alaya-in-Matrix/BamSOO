@@ -6,7 +6,7 @@ class TreeNode:
         self.ub        = None
         self.x         = None
         self.y         = None
-        self.chileren  = None
+        self.children  = None
         self.num_split = None
         pass
 
@@ -14,9 +14,6 @@ class TreeNode:
         pass
 
     def traverse(self):
-        pass
-
-    def kth_layer(self, k):
         pass
 
     def get_data(self):
@@ -32,26 +29,42 @@ class SOO:
     def __init__(self, f, conf):
         self.root = None
         pass
+
+    def eval_f(self, x):
+        pass
     
     def optimize(self):
-        pass
+        while self.eval_counter < self.max_eval:
+            self._optimize_oneiter()
 
     def _optimize_oneiter(self):
-        vmax      = -1 * np.inf;
+        vmax      = self._init_vmax();
         depth     = self.root.depth()
         node_list = [self.root]
         for i in range(1, depth):
             node_list = self._next_layer_nodes(node_list)
             best_node = self._select_from_one_layer(node_list)
-            to_eval   = self._decide_eval(best_node, vmax)
-            if to_eval:
-                node_list.expand()
-        pass
-
-    def _decide_eval(self, node, vmax):
+            to_expand = self._decide_expand(best_node, vmax)
+            if to_expand:
+                best_node.expand()
+                for c in best_node.children:
+                    self._set_node_value(c)
         pass
 
     def _next_layer_nodes(self, node_list):
+        xs = []
+        for node in node_list:
+            if node is not None:
+                xs += node.children
+        return xs
+
+    def _init_vmax(self):
+        pass
+
+    def _decide_expand(self, node, vmax):
+        pass
+    
+    def _set_node_value(self, node):
         pass
 
     def _select_from_one_layer(self, node_list):
