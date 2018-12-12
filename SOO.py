@@ -126,7 +126,11 @@ class SOO:
         node.y = self._eval_f(node.x)
 
     def _select_from_one_layer(self, node_list):
-        pass
+        best_node = node_list[0]
+        for n in node_list:
+            if(n.y < best_node.y):
+                best_node = n
+        return best_node
 
     def _comparator_init(self, x, y):
         pass
