@@ -73,6 +73,7 @@ class SOO:
                 xs += node.children
         return xs
 
+    #XXX: The methods below should be modified by classes inheriting SOO
     def _init_vmax(self):
         pass
 
