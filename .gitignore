@@ -1,2 +1,3 @@
 *.swp
 ref/
+__pycache__/
