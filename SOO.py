@@ -59,20 +59,21 @@ class SOO:
             print("Please provide bound in configure file");
             sys.exit(1)
 
-        self.debug        = conf.get('debug', False)
-        self.dim          = len(self.lb)
-        self.num_spec     = 1
-        self.max_eval     = conf.get('max_eval', self.dim * 20)
-        self.eval_counter = 0;
-        self.best_x       = np.ones(self.dim) * np.nan
-        self.best_y       = np.inf
-        self.dbx          = np.zeros((0, self.dim))
-        self.dby          = np.array([])
-        self.b            = self.lb; # transform from [0, 50] to [lb, ub]
-        self.a            = (self.ub - self.lb) / 50;
-        self.num_split    = conf.get('num_split', 2)
-        self.root         = TreeNode(np.zeros(self.dim), 50 * np.ones(self.dim), self.num_split)
-        self.root.y       = self._eval_f(np.random.uniform(0, 50, self.dim))
+        self.debug             = conf.get('debug', False)
+        self.dim               = len(self.lb)
+        self.num_spec          = 1
+        self.max_eval          = conf.get('max_eval', self.dim * 20)
+        self.eval_counter      = 0;
+        self.expansion_counter = 0
+        self.best_x            = np.ones(self.dim) * np.nan
+        self.best_y            = np.inf
+        self.dbx               = np.zeros((0, self.dim))
+        self.dby               = np.array([])
+        self.b                 = self.lb; # transform from [0, 50] to [lb, ub]
+        self.a                 = (self.ub - self.lb) / 50;
+        self.num_split         = conf.get('num_split', 2)
+        self.root              = TreeNode(np.zeros(self.dim), 50 * np.ones(self.dim), self.num_split)
+        self.root.y            = self._eval_f(np.random.uniform(0, 50, self.dim))
         pass
     
     def _scale_x(self, x):
@@ -100,9 +101,10 @@ class SOO:
                 for c in best_node.children:
                     self._set_node_value(c)
             node_list = self._next_layer_nodes(node_list)
+            self.expansion_counter += 1
     
     def _h(self):
-        return 1 + self.eval_counter
+        return 1 + math.ceil(math.sqrt(self.expansion_counter))
 
     def _next_layer_nodes(self, node_list):
         xs = []
