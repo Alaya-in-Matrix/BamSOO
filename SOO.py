@@ -42,11 +42,38 @@ class TreeNode:
 
 class SOO:
     def __init__(self, f, conf):
-        self.root = None
+        self.func = f
+        self.conf = conf
+        try:
+            self.lb = torch.tensor(conf['lb']).double()
+            self.ub = torch.tensor(conf['ub']).double()
+            for i in range(len(self.lb)):
+                if(self.lb[i] >= self.ub[i]):
+                    print("LB[%d] >= UB[%d]" % (i, i))
+                    sys.exit(1)
+        except:
+            print("Please provide bound in configure file");
+            sys.exit(1)
+        self.debug        = conf.get('debug', False)
+        self.dim          = len(self.lb)
+        self.eval_counter = 0;
+        self.best_x       = np.ones(self.dim) * np.nan
+        self.best_y       = np.inf
+        self.dbx          = np.zeros((0, self.dim), dtype=float64)
+        self.dby          = np.array([], dtype=float64)
+        self.b            = self.lb; # transform from [0, 50] to [lb, ub]
+        self.a            = (self.ub - self.lb) / 50;
+        self.num_split    = conf.get('num_split', 2)
+        self.root         = TreeNode(np.zeros(self.dim), 50 * np.ones(self.dim), self.num_split)
+        self.root.y       = self._eval_f(np.random.uniform(0, 50, self.dim))
         pass
+    
+    def _scale_x(self, x)
+    """ 
+    Scale from [0, 50] to [lb, ub]
+    """
+        return self.a * x + self.b
 
-    def eval_f(self, x):
-        pass
     
     def optimize(self):
         while self.eval_counter < self.max_eval:
@@ -57,14 +84,13 @@ class SOO:
         depth     = self.root.depth()
         node_list = [self.root]
         for i in range(1, depth):
-            node_list = self._next_layer_nodes(node_list)
             best_node = self._select_from_one_layer(node_list)
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
                 best_node.expand()
                 for c in best_node.children:
                     self._set_node_value(c)
-        pass
+            node_list = self._next_layer_nodes(node_list)
 
     def _next_layer_nodes(self, node_list):
         xs = []
@@ -74,14 +100,30 @@ class SOO:
         return xs
 
     #XXX: The methods below should be modified by classes inheriting SOO
+
+    def _eval_f(self, x):
+        """
+        Input: 1D tensor,  length = dim
+        Output: Scalar value
+        """
+        evaled   = self.func(self._scale_x(x))
+        evaled   = evaled.reshape(evaled.numel())
+        self.dbx = np.append(self.dbx, x)
+        self.dby = np.append(self.dby, evaled)
+        self._comparator_init()
+        if self._compare(evaled, self.best_y):
+            self.best_x = self._scale_x(x)
+            self.best_y = evaled
+        return evaled
+
     def _init_vmax(self):
-        pass
+        return np.inf
 
     def _decide_expand(self, node, vmax):
-        pass
+        return node.y < vmax
     
     def _set_node_value(self, node):
-        pass
+        node.y = self._eval_f(node.x)
 
     def _select_from_one_layer(self, node_list):
         pass
@@ -89,5 +131,6 @@ class SOO:
     def _comparator_init(self, x, y):
         pass
 
-    def _compare(self, x1, x2):
+    def _compare(self, y1, y2):
+        return np.all(y1 < y2)
         pass
