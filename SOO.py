@@ -1,29 +1,44 @@
+import sys, os
 import numpy as np
 
+# TODO: Use anytree to represent the tree
 class TreeNode:
-    def __init__(self):
-        self.lb        = None
-        self.ub        = None
-        self.x         = None
-        self.y         = None
-        self.children  = None
-        self.num_split = None
+    def __init__(self, lb, ub, num_split):
+        self.lb        = lb
+        self.ub        = ub
+        self.x         = 0.5 * (lb + ub)
+        self.y         = np.nan
+        self.children  = []
+        self.num_split = num_split
+        if not np.all(self.lb < self.ub):
+            print("Error in the bound of node");
+            sys.exit(1)
         pass
+
+    def is_leaf(self):
+        return (not self.children)
 
     def expand(self):
-        pass
-
-    def traverse(self):
-        pass
-
-    def get_data(self):
-        pass
-
-    def print_tree(self):
-        pass
+        if not self.is_leaf():
+            print("Can not expand node, the node is not a leaf")
+            sys.exit(1)
+        id  = np.argmax(self.ub - self.lb)
+        len = self.ub[id] - self.lb[id]
+        for i in range(self.num_split):
+            lb     = self.lb.copy()
+            ub     = self.ub.copy()
+            lb[id] = self.lb[id] + len * i;
+            ub[id] = self.lb[id] + len * (i+1);
+            self.children.append(TreeNode(lb, ub, num_split))
 
     def depth(self):
-        pass
+        if self.is_leaf():
+            return 1;
+        else:
+            max_sub_depth = 0;
+            for c in self.children:
+                max_sub_depth = max(max_sub_depth, c.depth())
+            return 1 + max_sub_depth
 
 class SOO:
     def __init__(self, f, conf):
