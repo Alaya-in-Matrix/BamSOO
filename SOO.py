@@ -19,7 +19,7 @@ class TreeNode:
     def is_leaf(self):
         return (not self.children)
 
-    def expand(self):
+    def expand(self, rand = False):
         if not self.is_leaf():
             print("Can not expand node, the node is not a leaf")
             sys.exit(1)
@@ -30,7 +30,7 @@ class TreeNode:
             ub     = self.ub.copy()
             lb[id] = self.lb[id] + len * i;
             ub[id] = self.lb[id] + len * (i+1);
-            self.children.append(TreeNode(lb, ub, self.num_split))
+            self.children.append(TreeNode(lb, ub, self.num_split, rand))
     
     def children_leaves(self):
         return list(filter(lambda c : c.is_leaf(), self.children))
@@ -59,22 +59,23 @@ class SOO:
             print("Please provide bound in configure file");
             sys.exit(1)
 
-        self.debug             = conf.get('debug', False)
-        self.dim               = len(self.lb)
-        self.num_spec          = 1
-        self.max_eval          = conf.get('max_eval', self.dim * 20)
-        self.eval_counter      = 0;
-        self.expansion_counter = 0
-        self.best_x            = np.ones(self.dim) * np.nan
-        self.best_y            = np.inf
-        self.dbx               = np.zeros((0, self.dim))
-        self.dby               = np.array([])
-        self.b                 = self.lb; # transform from [0, 50] to [lb, ub]
-        self.a                 = (self.ub - self.lb) / 50;
-        self.num_split         = conf.get('num_split', 2)
-        self.root              = TreeNode(np.zeros(self.dim), 50 * np.ones(self.dim), self.num_split)
-        self.root.y            = self._eval_f(np.random.uniform(0, 50, self.dim))
-        pass
+        self.debug          = conf.get('debug', False)
+        self.dim            = len(self.lb)
+        self.num_spec       = 1
+        self.max_eval       = conf.get('max_eval', self.dim * 20)
+        self.best_x         = np.ones(self.dim) * np.nan
+        self.best_y         = np.inf
+        self.dbx            = np.zeros((0, self.dim))
+        self.dby            = np.zeros((0, 1))
+        self.b              = self.lb; # transform from [0, 50] to [lb, ub]
+        self.a              = (self.ub - self.lb) / 50;
+        self.num_split      = conf.get('num_split', 2)
+        self.iter_counter   = 0 
+        self.node_expansion = 0 # n in BamSOO paper
+        self.eval_counter   = 0 # t in BaMSOO paper
+        self.root           = TreeNode(np.zeros(self.dim), 50 * np.ones(self.dim), self.num_split)
+        self.root.y         = self._eval_f(self.root.x)
+
     
     def _scale_x(self, x):
         """ 
@@ -89,6 +90,7 @@ class SOO:
         return self.best_x, self.best_y
 
     def _optimize_oneiter(self):
+        self.iter_counter += 1
         vmax      = self._init_vmax();
         depth     = self.root.depth()
         node_list = [self.root]
@@ -96,15 +98,16 @@ class SOO:
             best_node = self._select_from_one_layer(node_list)
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
-                vmax = best_node.y
                 best_node.expand()
                 for c in best_node.children:
                     self._set_node_value(c)
+                vmax = best_node.y
+                self.node_expansion += 1
             node_list = self._next_layer_nodes(node_list)
-            self.expansion_counter += 1
+        print("After %d iter, evaluated: %d, best: %g" % (self.iter_counter, self.eval_counter, self.best_y))
     
     def _h(self):
-        return 1 + math.ceil(math.sqrt(self.expansion_counter))
+        return 1 + math.ceil(math.sqrt(self.node_expansion))
 
     def _next_layer_nodes(self, node_list):
         xs = []
@@ -124,15 +127,14 @@ class SOO:
             assert(x.ndim == 1)
             assert(x.size == self.dim)
         evaled   = self.func(self._scale_x(x))
-        evaled   = evaled.reshape(evaled.size)
+        evaled   = evaled.reshape(1, evaled.size)
         assert evaled.size == self.num_spec
-        self.dbx = np.concatenate((self.dbx, np.array([x])))
-        self.dby = np.append(self.dby, evaled)
+        self.dbx = np.concatenate((self.dbx, np.array([self._scale_x(x)])))
+        self.dby = np.concatenate((self.dby, evaled))
         self._comparator_init(self.dbx, self.dby)
         if self._compare(evaled, self.best_y):
             self.best_x = self._scale_x(x)
             self.best_y = evaled
-        print("Best: %g" % self.best_y)
         self.eval_counter += 1
         return evaled
 
@@ -161,3 +163,4 @@ class SOO:
 
     def _compare(self, y1, y2):
         return np.all(y1 < y2)
+
