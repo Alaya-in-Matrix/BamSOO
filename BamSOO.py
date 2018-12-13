@@ -22,6 +22,7 @@ class BamSOO(SOO):
     
     def _train_GP(self):
         if self.new_eval > 0:
+            # self.gp = GP(self.dbx, self.dby)
             self.gp.update_db(self.dbx, self.dby)
             self.gp.train()
             self.new_eval = 0
@@ -49,6 +50,7 @@ class BamSOO(SOO):
             best_node = self._select_from_one_layer(node_list)
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
+                py, ps2   = self.gp.predict(best_node.x)
                 best_node.expand()
                 for c in best_node.children:
                     self.node_evaluation += 1
@@ -56,7 +58,15 @@ class BamSOO(SOO):
                 vmax = best_node.y
                 self.node_expansion += 1
             node_list = self._next_layer_nodes(node_list)
-        print("After %d iter, beta = %g, depth: %d, search depth: %d, evaluated: %d, best: %g" % (self.iter_counter, self._beta(), depth, search_depth, self.eval_counter, self.best_y))
+        print("After %d iter, beta = %g, depth: %d, search depth: %d, evaluated: %d, node_eval: %d, num_expand: %d, best: %g" % (
+            self.iter_counter,
+            self._beta(),
+            depth,
+            search_depth,
+            self.eval_counter,
+            self.node_evaluation, 
+            self.node_expansion, 
+            self.best_y))
 
     def _set_node_value(self, node):
         py, ps2       = self.gp.predict(node.x)
