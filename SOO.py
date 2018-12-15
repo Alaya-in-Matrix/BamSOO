@@ -22,6 +22,7 @@ class SOO:
         self.dim            = len(self.lb)
         self.num_spec       = 1
         self.max_eval       = conf.get('max_eval', self.dim * 20)
+        self.fmin           = conf.get('fmin', -1 * np.inf)
         self.best_x         = np.ones(self.dim) * np.nan
         self.best_y         = np.inf
         self.dbx            = np.zeros((0, self.dim))
@@ -44,7 +45,7 @@ class SOO:
 
     
     def optimize(self):
-        while self.eval_counter < self.max_eval:
+        while self.eval_counter < self.max_eval and not self._compare(self.best_y, self.fmin):
             self._optimize_oneiter()
         return self.best_x, self.best_y
 
