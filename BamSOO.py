@@ -1,5 +1,6 @@
 from SOO import TreeNode, SOO
 from GP import GP
+from TreeNode import TreeNode
 import numpy as np
 import sys
 
