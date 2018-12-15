@@ -67,19 +67,19 @@ class SOO:
         self.best_y         = np.inf
         self.dbx            = np.zeros((0, self.dim))
         self.dby            = np.zeros((0, 1))
-        self.b              = self.lb; # transform from [0, 50] to [lb, ub]
-        self.a              = (self.ub - self.lb) / 50;
+        self.b              = self.lb; # transform from [0, 10] to [lb, ub]
+        self.a              = (self.ub - self.lb) / 10;
         self.num_split      = conf.get('num_split', 2)
         self.iter_counter   = 0 
         self.node_expansion = 0 # n in BamSOO paper
         self.eval_counter   = 0 # t in BaMSOO paper
-        self.root           = TreeNode(np.zeros(self.dim), 50 * np.ones(self.dim), self.num_split)
+        self.root           = TreeNode(np.zeros(self.dim), 10 * np.ones(self.dim), self.num_split)
         self.root.y         = self._eval_f(self.root.x)
 
     
     def _scale_x(self, x):
         """ 
-        Scale from [0, 50] to [lb, ub]
+        Scale from [0, 10] to [lb, ub]
         """
         return self.a * x + self.b
 
@@ -107,7 +107,8 @@ class SOO:
         print("After %d iter, evaluated: %d, best: %g" % (self.iter_counter, self.eval_counter, self.best_y))
     
     def _h(self):
-        return 1 + math.ceil(math.sqrt(self.node_expansion))
+        return math.ceil(math.sqrt(self.max_eval))
+        # return 1 + math.ceil(math.sqrt(self.node_expansion))
 
     def _next_layer_nodes(self, node_list):
         xs = []

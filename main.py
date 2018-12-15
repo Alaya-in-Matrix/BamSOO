@@ -43,8 +43,8 @@ conf['lb']        = np.zeros(4)
 conf['ub']        = 10 * np.ones(4)
 conf['max_eval']  = 1000
 conf['num_split'] = 2
-conf['rand_init'] = 100
-conf['eta']       = 0.1
+conf['rand_init'] = 10
+conf['eta']       = 0.9
 
 # conf           = toml.load('conf.toml');
 opt            = BamSOO.BamSOO(f, conf);
