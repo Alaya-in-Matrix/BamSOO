@@ -26,7 +26,7 @@ class GP:
         # self.m.likelihood.variance = np.maximum(2e-20, 1e-2 * np.var(self.train_y))
         # self.m.likelihood.variance.constrain_bounded(1e-20, 1e10)
 
-        self.m.kern.variance       = (self.train_y.max() - self.train_y.min())**2
+        self.m.kern.variance       = 0.3 * (self.train_y.max() - self.train_y.min())**2
         self.m.kern.lengthscale    = 0.3 * (self.train_x.max(axis=0)  - self.train_x.min(axis=0))
         self.m.likelihood.variance = np.maximum(2e-20, 1e-2 * np.var(self.train_y))
         self.m.likelihood.variance.constrain_bounded(1e-20, 1e10)

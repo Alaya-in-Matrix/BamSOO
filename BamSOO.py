@@ -2,6 +2,7 @@ from SOO import TreeNode, SOO
 from GP import GP
 from TreeNode import TreeNode
 import numpy as np
+import math
 import sys
 
 class BamSOO(SOO):
@@ -10,9 +11,13 @@ class BamSOO(SOO):
         super(BamSOO, self).__init__(f, conf)
         self.new_eval        = 0
         self.rand_init       = conf.get('rand_init', 2)
+        self.train_gp        = conf.get('train_gp', False)
+        self.eval_gap        = conf.get('eval_gap', np.inf)
         self._eta            = conf.get('eta', 0.5)
         self.node_evaluation = 0 # N in BamSOO paper
         self._init_GP()
+        if self.eval_gap == 0: # reduce to SOO
+            self.train_gp = False
 
     def _init_GP(self):
         init_x = np.random.uniform(0, 50, (self.rand_init, self.dim))
@@ -22,11 +27,11 @@ class BamSOO(SOO):
         self.gp        = GP(self.dbx, self.dby)
     
     def _train_GP(self):
-        if self.new_eval > 0:
-            # self.gp = GP(self.dbx, self.dby)
+        if self.new_eval > 0 and self.eval_gap > 0:
             self.gp.update_db(self.dbx, self.dby)
-            self.gp.train()
-            self.new_eval = 0
+            if self.train_gp:
+                self.gp.train()
+        self.new_eval = 0
 
     def _beta(self):
         """
@@ -51,11 +56,13 @@ class BamSOO(SOO):
             best_node = self._select_from_one_layer(node_list)
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
-                py, ps2   = self.gp.predict(best_node.x)
                 best_node.expand()
-                for c in best_node.children:
-                    self.node_evaluation += 1
-                    self._set_node_value(c)
+                for i in range(best_node.num_split):
+                    if best_node.num_split % 2 == 1 and i == math.ceil(best_node.num_split / 2):
+                        best_node.children[i].y = best_node.y
+                    else:
+                        self.node_evaluation += 1
+                        self._set_node_value(best_node.children[i])
                 vmax = best_node.y
                 self.node_expansion += 1
             node_list = self._next_layer_nodes(node_list)
@@ -70,10 +77,14 @@ class BamSOO(SOO):
             self.best_y))
 
     def _set_node_value(self, node):
-        py, ps2       = self.gp.predict(node.x)
-        lcb, ucb      = self._cb(py, ps2)
-        if(self._compare(lcb, self.best_y)):
+        if self.node_evaluation - self.eval_counter + self.rand_init < self.eval_gap:
+            py, ps2       = self.gp.predict(node.x)
+            lcb, ucb      = self._cb(py, ps2)
+            if self._compare(lcb, self.best_y) or (self.node_evaluation - self.eval_counter >= self.eval_gap):
+                node.y        = self._eval_f(node.x)
+                self.new_eval += 1
+            else:
+                node.y = ucb
+        else: # reduce to SOO, no GP predictions
             node.y        = self._eval_f(node.x)
             self.new_eval += 1
-        else:
-            node.y = ucb
