@@ -59,11 +59,11 @@ class SOO:
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
                 best_node.expand()
-                for i in range(best_node.num_split):
+                for child_id in range(best_node.num_split):
                     if best_node.num_split % 2 == 1 and i == math.ceil(best_node.num_split / 2):
-                        best_node.children[i].y = best_node.y
+                        best_node.children[child_id].y = best_node.y
                     else:
-                        self._set_node_value(best_node.children[i])
+                        self._set_node_value(best_node.children[child_id])
                 vmax = best_node.y
                 self.node_expansion += 1
             node_list = self._next_layer_nodes(node_list)
