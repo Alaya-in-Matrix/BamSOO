@@ -1,7 +1,6 @@
 import sys, os
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 from TreeNode import TreeNode
 
 class SOO:

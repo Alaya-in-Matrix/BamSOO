@@ -4,7 +4,6 @@ from TreeNode import TreeNode
 import numpy as np
 import math
 import sys
-import matplotlib.pyplot as plt
 
 class BamSOO(SOO):
     def __init__(self, f, conf):

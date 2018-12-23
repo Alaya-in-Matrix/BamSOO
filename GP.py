@@ -1,5 +1,4 @@
 import GPy
-from GPyOpt.util.general import get_quantiles
 import numpy as np
 from math import pow, log, sqrt
 import sys

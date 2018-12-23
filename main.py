@@ -1,5 +1,4 @@
 import SOO, BamSOO
-import toml
 import numpy as np
 
 # Shekel
