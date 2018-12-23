@@ -1,0 +1,6 @@
+num_split        = 3
+eta              = 1
+rv               = 0.3
+rl               = 0.3
+debug            = true
+max_eval         = 500

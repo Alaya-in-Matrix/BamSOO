@@ -1,6 +1,7 @@
 import sys, os
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 from TreeNode import TreeNode
 
 class SOO:
@@ -27,40 +28,44 @@ class SOO:
         self.best_y         = np.inf
         self.dbx            = np.zeros((0, self.dim))
         self.dby            = np.zeros((0, 1))
-        self.b              = self.lb; # transform from [0, 10] to [lb, ub]
-        self.a              = (self.ub - self.lb) / 10;
+        self.scaled_lb      = 0
+        self.scaled_ub      = 10
+        self.a              = (self.ub - self.lb) / (self.scaled_ub - self.scaled_lb);
+        self.b              = self.lb - self.a * self.scaled_lb; # transform from [scaled_lb, scaled_ub] to [lb, ub]
         self.num_split      = conf.get('num_split', 2)
         self.iter_counter   = 0 
         self.node_expansion = 0 # n in BamSOO paper
         self.eval_counter   = 0 # t in BaMSOO paper
-        self.root           = TreeNode(np.zeros(self.dim), 10 * np.ones(self.dim), self.num_split)
+        self.root           = TreeNode(self.scaled_lb * np.ones(self.dim), self.scaled_ub * np.ones(self.dim), self.num_split)
         self.root.y         = self._eval_f(self.root.x)
+        self.have_expansion = True
 
     
     def _scale_x(self, x):
         """ 
-        Scale from [0, 10] to [lb, ub]
+        Scale from [scaled_lb, scaled_ub] to [lb, ub]
         """
         return self.a * x + self.b
-
     
     def optimize(self):
-        while self.eval_counter < self.max_eval and not self._compare(self.best_y, self.fmin):
+        while self.have_expansion and self.eval_counter < self.max_eval and not self._compare(self.best_y, self.fmin):
             self._optimize_oneiter()
         return self.best_x, self.best_y
 
     def _optimize_oneiter(self):
-        self.iter_counter += 1
-        vmax      = self._init_vmax();
-        depth     = self.root.depth()
-        node_list = [self.root]
+        self.iter_counter   += 1
+        vmax                 = self._init_vmax();
+        depth                = self.root.depth()
+        node_list            = [self.root]
+        self.have_expansion  = False
         for i in range(min(self._h(), depth)):
             best_node = self._select_from_one_layer(node_list)
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
+                self.have_expansion = True
                 best_node.expand()
                 for child_id in range(best_node.num_split):
-                    if best_node.num_split % 2 == 1 and i == math.ceil(best_node.num_split / 2):
+                    if best_node.num_split % 2 == 1 and child_id == math.ceil(best_node.num_split / 2):
                         best_node.children[child_id].y = best_node.y
                     else:
                         self._set_node_value(best_node.children[child_id])
@@ -70,8 +75,8 @@ class SOO:
         print("After %d iter, evaluated: %d, best: %g" % (self.iter_counter, self.eval_counter, self.best_y))
     
     def _h(self):
-        return math.ceil(math.sqrt(self.max_eval))
-        # return 1 + math.ceil(math.sqrt(self.node_expansion))
+        # return math.ceil(math.sqrt(self.max_eval))
+        return 1 + math.ceil(math.sqrt(self.node_expansion))
 
     def _next_layer_nodes(self, node_list):
         xs = []
@@ -93,7 +98,7 @@ class SOO:
         evaled   = self.func(self._scale_x(x))
         evaled   = evaled.reshape(1, evaled.size)
         assert evaled.size == self.num_spec
-        self.dbx = np.concatenate((self.dbx, np.array([self._scale_x(x)])))
+        self.dbx = np.concatenate((self.dbx, np.array([x])))
         self.dby = np.concatenate((self.dby, evaled))
         self._comparator_init(self.dbx, self.dby)
         if self._compare(evaled, self.best_y):

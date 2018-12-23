@@ -4,11 +4,13 @@ from TreeNode import TreeNode
 import numpy as np
 import math
 import sys
+import matplotlib.pyplot as plt
 
 class BamSOO(SOO):
     def __init__(self, f, conf):
         # SOO.__init__(self, f, conf)
         super(BamSOO, self).__init__(f, conf)
+        self.conf            = conf
         self.new_eval        = 0
         self.rand_init       = conf.get('rand_init', 2)
         self.train_gp        = conf.get('train_gp', False)
@@ -16,21 +18,25 @@ class BamSOO(SOO):
         self.debug           = conf.get('debug', False)
         self._eta            = conf.get('eta', 0.5)
         self.node_evaluation = 0 # N in BamSOO paper
-        self._init_GP()
         if self.eval_gap == 0: # reduce to SOO
-            self.train_gp = False
+            self.rand_init = 0
+            self.train_gp  = False
+            self.gp        = None
+        else:
+            self._init_GP()
 
     def _init_GP(self):
-        init_x = np.random.uniform(0, 50, (self.rand_init, self.dim))
+        init_x = np.random.uniform(self.scaled_lb, self.scaled_ub, (self.rand_init, self.dim))
         for x in init_x:
             self._eval_f(x)
             self.new_eval += 1
-        self.gp = GP(self.dbx, self.dby)
+        self.gp = GP(self.dbx, self.dby, self.conf)
     
     def _train_GP(self):
         if self.new_eval > 0 and self.eval_gap > 0:
             assert(self.gp.train_x.shape[0] == self.dbx.shape[0])
             if self.train_gp:
+                self.gp = GP(self.dbx, self.dby, self.conf)
                 self.gp.train()
                 if self.debug:
                     print(self.gp.m)
@@ -50,18 +56,20 @@ class BamSOO(SOO):
     
     def _optimize_oneiter(self):
         self.iter_counter += 1
-        vmax               = self._init_vmax();
-        node_list          = [self.root]
-        depth              = self.root.depth()
-        search_depth       = min(self._h(), depth)
+        vmax           = self._init_vmax();
+        node_list      = [self.root]
+        depth          = self.root.depth()
+        search_depth   = min(self._h(), depth)
         self._train_GP() # XXX: new eval 问题
+        self.have_expansion = False
         for i in range(search_depth):
             best_node = self._select_from_one_layer(node_list)
             to_expand = self._decide_expand(best_node, vmax)
             if to_expand:
+                self.have_expansion = True
                 best_node.expand()
                 for child_id in range(best_node.num_split):
-                    if best_node.num_split % 2 == 1 and i == math.ceil(best_node.num_split / 2):
+                    if best_node.num_split % 2 == 1 and child_id == math.ceil(best_node.num_split / 2):
                         best_node.children[child_id].y = best_node.y
                     else:
                         self.node_evaluation += 1
@@ -84,7 +92,7 @@ class BamSOO(SOO):
             py, ps2       = self.gp.predict(node.x)
             lcb, ucb      = self._cb(py, ps2)
             if self._compare(lcb, self.best_y) or (self.node_evaluation - self.eval_counter >= self.eval_gap):
-                node.y        = self._eval_f(node.x)
+                node.y  = self._eval_f(node.x)
                 self.gp.update_db(self.dbx, self.dby)
                 self.new_eval += 1
                 if self.debug:
