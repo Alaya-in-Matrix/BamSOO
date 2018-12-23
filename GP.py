@@ -3,7 +3,6 @@ import numpy as np
 from math import pow, log, sqrt
 import sys
 
-# TODO: standardize the training data
 class GP:
     def __init__(self, train_x, train_y, conf = {}):
 
